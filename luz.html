@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monitor de Luz - Estado en Tiempo Real</title>
+  <style>
+    :root {
+      --bg-color: #0f172a;
+      --card-bg: #1e293b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --status-up: #22c55e;
+      --status-down: #ef4444;
+      --status-grace: #f59e0b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      display: flex;
+      justify-content: center;
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 600px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    header {
+      text-align: center;
+      padding: 10px 0;
+    }
+
+    header h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* Tarjeta Principal de Estado */
+    .status-card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 30px;
+      text-align: center;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+      border: 2px solid transparent;
+      transition: all 0.3s ease;
+    }
+
+    .status-indicator {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      margin: 0 auto 20px auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
+    }
+
+    .status-card.up {
+      border-color: var(--status-up);
+    }
+    .status-card.up .status-indicator {
+      background-color: rgba(34, 197, 94, 0.2);
+      color: var(--status-up);
+    }
+
+    .status-card.down {
+      border-color: var(--status-down);
+    }
+    .status-card.down .status-indicator {
+      background-color: rgba(239, 68, 68, 0.2);
+      color: var(--status-down);
+    }
+
+    .status-card.grace {
+      border-color: var(--status-grace);
+    }
+    .status-card.grace .status-indicator {
+      background-color: rgba(245, 158, 11, 0.2);
+      color: var(--status-grace);
+    }
+
+    .status-title {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .status-subtext {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    /* Historial */
+    .history-card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    }
+
+    .history-card h2 {
+      font-size: 1.1rem;
+      margin-bottom: 15px;
+      color: var(--text-main);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .log-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .log-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 8px;
+      font-size: 0.9rem;
+    }
+
+    .log-tag {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: bold;
+    }
+
+    .tag-up { background: rgba(34, 197, 94, 0.2); color: var(--status-up); }
+    .tag-down { background: rgba(239, 68, 68, 0.2); color: var(--status-down); }
+
+    .btn {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .btn:hover { background: #2563eb; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <h1>Monitor de Energía Residencial</h1>
+    </header>
+
+    <!-- Estado Principal -->
+    <div id="statusCard" class="status-card grace">
+      <div id="statusIcon" class="status-indicator">⚡</div>
+      <div id="statusText" class="status-title">Cargando estado...</div>
+      <div id="statusSubtext" class="status-subtext">Consultando servidor...</div>
+    </div>
+
+    <!-- Registro de Actividad -->
+    <div class="history-card">
+      <h2>
+        <span>Últimos Latidos Registrados</span>
+        <button class="btn" onclick="fetchData()">🔄 Actualizar</button>
+      </h2>
+      <ul id="logList" class="log-list">
+        <li class="log-item">Cargando registros...</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    // PEGA AQUÍ TU URL DE CLOUDFLARE WORKER ENTRE LAS COMILLAS
+    const WORKER_URL = "https://monitor-luz-casa.royber-seijas.workers.dev";
+
+    async function fetchData() {
+      try {
+        const response = await fetch(WORKER_URL);
+        if (!response.ok) throw new Error('Error al conectar con el servidor proxy');
+
+        const data = await response.json();
+        
+        // Actualizar estado principal
+        if (data.status === 'up') {
+          const ultimoPing = new Date(data.last_ping).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          updateUI('up', '🟢 HAY LUZ EN CASA', `Último latido recibido a las ${ultimoPing}`);
+        } else if (data.status === 'down') {
+          updateUI('down', '🔴 SIN LUZ / CORTE DETECTADO', 'El ESP32-S3 dejó de enviar latidos.');
+        } else {
+          updateUI('grace', '🟡 EN ESPERA / GRACIA', 'Verificando señal del ESP32-S3...');
+        }
+
+        // Cargar lista de pings
+        const logList = document.getElementById('logList');
+        logList.innerHTML = '';
+
+        if (data.pings && data.pings.length > 0) {
+          data.pings.forEach(ping => {
+            const fecha = new Date(ping.date).toLocaleString([], { dateStyle: 'short', timeStyle: 'medium' });
+            const item = document.createElement('li');
+            item.className = 'log-item';
+            item.innerHTML = `
+              <span>${fecha}</span>
+              <span class="log-tag tag-up">Latido OK (${ping.type || 'ping'})</span>
+            `;
+            logList.appendChild(item);
+          });
+        } else {
+          logList.innerHTML = '<li class="log-item">No hay registros recientes.</li>';
+        }
+
+      } catch (err) {
+        updateUI('down', 'Error de Conexión', 'No se pudo consultar el estado.');
+        console.error(err);
+      }
+    }
+
+    function updateUI(statusClass, title, subtext) {
+      const card = document.getElementById('statusCard');
+      const icon = document.getElementById('statusIcon');
+      
+      card.className = `status-card ${statusClass}`;
+      document.getElementById('statusText').innerText = title;
+      document.getElementById('statusSubtext').innerText = subtext;
+
+      if (statusClass === 'up') icon.innerText = '⚡';
+      else if (statusClass === 'down') icon.innerText = '🚫';
+      else icon.innerText = '⏳';
+    }
+
+    // Cargar datos al abrir y actualizar cada 30 segundos
+    fetchData();
+    setInterval(fetchData, 30000);
+  </script>
+</body>
+</html>
