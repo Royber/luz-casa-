@@ -1,262 +1,261 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Monitor de Luz - Estado en Tiempo Real</title>
-  <style>
-    :root {
-      --bg-color: #0f172a;
-      --card-bg: #1e293b;
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
-      --status-up: #22c55e;
-      --status-down: #ef4444;
-      --status-grace: #f59e0b;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitor de Luz en Casa</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-green: #22c55e;
+            --accent-red: #ef4444;
+            --border-color: #334155;
+        }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
 
-    body {
-      background-color: var(--bg-color);
-      color: var(--text-main);
-      display: flex;
-      justify-content: center;
-      padding: 20px;
-      min-height: 100vh;
-    }
+        .container {
+            width: 100%;
+            max-width: 500px;
+        }
 
-    .container {
-      width: 100%;
-      max-width: 600px;
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
+        h1 {
+            font-size: 1.5rem;
+            text-align: center;
+            margin-bottom: 20px;
+        }
 
-    header {
-      text-align: center;
-      padding: 10px 0;
-    }
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
 
-    header h1 {
-      font-size: 1.5rem;
-      font-weight: 600;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
+        .status-box {
+            text-align: center;
+            padding: 20px;
+            border-radius: 8px;
+            font-size: 1.25rem;
+            font-weight: bold;
+            margin-bottom: 16px;
+        }
 
-    /* Tarjeta Principal de Estado */
-    .status-card {
-      background: var(--card-bg);
-      border-radius: 16px;
-      padding: 30px;
-      text-align: center;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
-      border: 2px solid transparent;
-      transition: all 0.3s ease;
-    }
+        .status-up {
+            background-color: rgba(34, 197, 94, 0.15);
+            color: var(--accent-green);
+            border: 1px solid var(--accent-green);
+        }
 
-    .status-indicator {
-      width: 90px;
-      height: 90px;
-      border-radius: 50%;
-      margin: 0 auto 20px auto;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 2.5rem;
-      box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
-    }
+        .status-down {
+            background-color: rgba(239, 68, 68, 0.15);
+            color: var(--accent-red);
+            border: 1px solid var(--accent-red);
+        }
 
-    .status-card.up {
-      border-color: var(--status-up);
-    }
-    .status-card.up .status-indicator {
-      background-color: rgba(34, 197, 94, 0.2);
-      color: var(--status-up);
-    }
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
 
-    .status-card.down {
-      border-color: var(--status-down);
-    }
-    .status-card.down .status-indicator {
-      background-color: rgba(239, 68, 68, 0.2);
-      color: var(--status-down);
-    }
+        .stat-item {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
 
-    .status-card.grace {
-      border-color: var(--status-grace);
-    }
-    .status-card.grace .status-indicator {
-      background-color: rgba(245, 158, 11, 0.2);
-      color: var(--status-grace);
-    }
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
 
-    .status-title {
-      font-size: 1.8rem;
-      font-weight: 700;
-      margin-bottom: 8px;
-    }
+        .stat-value {
+            font-size: 1.05rem;
+            font-weight: 600;
+        }
 
-    .status-subtext {
-      color: var(--text-muted);
-      font-size: 0.95rem;
-    }
+        h2 {
+            font-size: 1.1rem;
+            margin-top: 0;
+            margin-bottom: 12px;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 6px;
+        }
 
-    /* Historial */
-    .history-card {
-      background: var(--card-bg);
-      border-radius: 16px;
-      padding: 20px;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
-    }
+        ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            max-height: 200px;
+            overflow-y: auto;
+        }
 
-    .history-card h2 {
-      font-size: 1.1rem;
-      margin-bottom: 15px;
-      color: var(--text-main);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
+        li {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 0.9rem;
+        }
 
-    .log-list {
-      list-style: none;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      max-height: 300px;
-      overflow-y: auto;
-    }
-
-    .log-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px;
-      background: rgba(255, 255, 255, 0.03);
-      border-radius: 8px;
-      font-size: 0.9rem;
-    }
-
-    .log-tag {
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 0.75rem;
-      font-weight: bold;
-    }
-
-    .tag-up { background: rgba(34, 197, 94, 0.2); color: var(--status-up); }
-    .tag-down { background: rgba(239, 68, 68, 0.2); color: var(--status-down); }
-
-    .btn {
-      background: #3b82f6;
-      color: white;
-      border: none;
-      padding: 8px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 600;
-    }
-
-    .btn:hover { background: #2563eb; }
-  </style>
+        li:last-child {
+            border-bottom: none;
+        }
+    </style>
 </head>
 <body>
 
-  <div class="container">
-    <header>
-      <h1>Monitor de Energía Residencial</h1>
-    </header>
+    <div class="container">
+        <h1>Monitor de Energía</h1>
 
-    <!-- Estado Principal -->
-    <div id="statusCard" class="status-card grace">
-      <div id="statusIcon" class="status-indicator">⚡</div>
-      <div id="statusText" class="status-title">Cargando estado...</div>
-      <div id="statusSubtext" class="status-subtext">Consultando servidor...</div>
+        <!-- Estado Actual -->
+        <div class="card">
+            <div id="statusBox" class="status-box status-up">
+                Cargando estado...
+            </div>
+
+            <div class="stat-grid">
+                <div class="stat-item">
+                    <div class="stat-label" id="currentDurationLabel">Tiempo en el estado actual</div>
+                    <div class="stat-value" id="currentDuration">Calculando...</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Último corte registrado</div>
+                    <div class="stat-value" id="lastOutage">Analizando historial...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Historial de Latidos -->
+        <div class="card">
+            <h2>Últimos Registros</h2>
+            <ul id="logList">
+                <li>Cargando registros...</li>
+            </ul>
+        </div>
     </div>
 
-    <!-- Registro de Actividad -->
-    <div class="history-card">
-      <h2>
-        <span>Últimos Latidos Registrados</span>
-        <button class="btn" onclick="fetchData()">🔄 Actualizar</button>
-      </h2>
-      <ul id="logList" class="log-list">
-        <li class="log-item">Cargando registros...</li>
-      </ul>
-    </div>
-  </div>
+    <script>
+        // PEGA AQUÍ TU URL DE CLOUDFLARE WORKER
+        const WORKER_URL = "https://monitor-luz-casa.royber-seijas.workers.dev";
 
-  <script>
-    // PEGA AQUÍ TU URL DE CLOUDFLARE WORKER ENTRE LAS COMILLAS
-    const WORKER_URL = "https://monitor-luz-casa.royber-seijas.workers.dev";
+        // Asumimos que tu ESP32 manda un ping cada X minutos (ej. cada 5 min). 
+        // Si pasan más de este margen sin ping, se asume que se fue la luz.
+        const EXPECTED_PING_INTERVAL_MINUTES = 6; 
 
-    async function fetchData() {
-      try {
-        const response = await fetch(WORKER_URL);
-        if (!response.ok) throw new Error('Error al conectar con el servidor proxy');
+        function formatDuration(ms) {
+            const totalMinutes = Math.floor(ms / (1000 * 60));
+            const hours = Math.floor(totalMinutes / 60);
+            const minutes = totalMinutes % 60;
 
-        const data = await response.json();
-        
-        // Actualizar estado principal
-        if (data.status === 'up') {
-          const ultimoPing = new Date(data.last_ping).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          updateUI('up', '🟢 HAY LUZ EN CASA', `Último latido recibido a las ${ultimoPing}`);
-        } else if (data.status === 'down') {
-          updateUI('down', '🔴 SIN LUZ / CORTE DETECTADO', 'El ESP32-S3 dejó de enviar latidos.');
-        } else {
-          updateUI('grace', '🟡 EN ESPERA / GRACIA', 'Verificando señal del ESP32-S3...');
+            if (hours === 0) return `${minutes} minuto(s)`;
+            return `${hours} hora(s) y ${minutes} minuto(s)`;
         }
 
-        // Cargar lista de pings
-        const logList = document.getElementById('logList');
-        logList.innerHTML = '';
-
-        if (data.pings && data.pings.length > 0) {
-          data.pings.forEach(ping => {
-            const fecha = new Date(ping.date).toLocaleString([], { dateStyle: 'short', timeStyle: 'medium' });
-            const item = document.createElement('li');
-            item.className = 'log-item';
-            item.innerHTML = `
-              <span>${fecha}</span>
-              <span class="log-tag tag-up">Latido OK (${ping.type || 'ping'})</span>
-            `;
-            logList.appendChild(item);
-          });
-        } else {
-          logList.innerHTML = '<li class="log-item">No hay registros recientes.</li>';
+        async function fetchMonitorData() {
+            try {
+                const response = await fetch(WORKER_URL);
+                if (!response.ok) throw new Error("Error al conectar con el servidor");
+                
+                const data = await response.json();
+                processDashboard(data);
+            } catch (error) {
+                document.getElementById('statusBox').className = 'status-box status-down';
+                document.getElementById('statusBox').innerText = 'Error de Conexión';
+                console.error(error);
+            }
         }
 
-      } catch (err) {
-        updateUI('down', 'Error de Conexión', 'No se pudo consultar el estado.');
-        console.error(err);
-      }
-    }
+        function processDashboard(data) {
+            const statusBox = document.getElementById('statusBox');
+            const currentDurationEl = document.getElementById('currentDuration');
+            const currentDurationLabel = document.getElementById('currentDurationLabel');
+            const lastOutageEl = document.getElementById('lastOutage');
+            const logList = document.getElementById('logList');
 
-    function updateUI(statusClass, title, subtext) {
-      const card = document.getElementById('statusCard');
-      const icon = document.getElementById('statusIcon');
-      
-      card.className = `status-card ${statusClass}`;
-      document.getElementById('statusText').innerText = title;
-      document.getElementById('statusSubtext').innerText = subtext;
+            const pings = data.pings || [];
+            
+            // 1. Mostrar estado actual básico
+            const isUp = data.status === 'up';
+            statusBox.className = `status-box ${isUp ? 'status-up' : 'status-down'}`;
+            statusBox.innerText = isUp ? 'HAY LUZ EN CASA ⚡' : 'SIN LUZ (APAGÓN) ❌';
 
-      if (statusClass === 'up') icon.innerText = '⚡';
-      else if (statusClass === 'down') icon.innerText = '🚫';
-      else icon.innerText = '⏳';
-    }
+            const now = new Date();
 
-    // Cargar datos al abrir y actualizar cada 30 segundos
-    fetchData();
-    setInterval(fetchData, 30000);
-  </script>
+            if (pings.length > 0) {
+                // Ordenar pings del más antiguo al más reciente para analizar la línea de tiempo
+                const sortedPings = [...pings].sort((a, b) => new Date(a.date) - new Date(b.date));
+                const lastPingTime = new Date(sortedPings[sortedPings.length - 1].date);
+
+                // --- CALCULO 1: Tiempo en el estado actual ---
+                if (isUp) {
+                    currentDurationLabel.innerText = "Tiempo con luz continua";
+                    // Desde el último ping recibido hasta ahora
+                    const diffMs = now - lastPingTime;
+                    currentDurationEl.innerText = formatDuration(Math.max(0, diffMs));
+                } else {
+                    currentDurationLabel.innerText = "Tiempo que lleva el apagón";
+                    const diffMs = now - lastPingTime;
+                    currentDurationEl.innerText = formatDuration(Math.max(0, diffMs));
+                }
+
+                // --- CALCULO 2: Buscar el último corte (gap entre pings) ---
+                let foundOutage = false;
+                for (let i = sortedPings.length - 1; i > 0; i--) {
+                    const current = new Date(sortedPings[i].date);
+                    const previous = new Date(sortedPings[i-1].date);
+                    const gapMinutes = (current - previous) / (1000 * 60);
+
+                    // Si la brecha entre dos pings es mayor al intervalo esperado, hubo un corte ahí
+                    if (gapMinutes > EXPECTED_PING_INTERVAL_MINUTES) {
+                        const outageDuration = gapMinutes;
+                        const outageStart = previous.toLocaleString([], { dateStyle: 'short', timeStyle: 'short' });
+                        lastOutageEl.innerText = `${outageStart} (Duró ${formatDuration(outageDuration * 60 * 1000)})`;
+                        foundOutage = true;
+                        break;
+                    }
+                }
+
+                if (!foundOutage) {
+                    lastOutageEl.innerText = "Ningún corte reciente registrado";
+                }
+
+                // --- LLENAR LISTA DE REGISTROS ---
+                logList.innerHTML = '';
+                sortedPings.reverse().slice(0, 10).forEach(ping => {
+                    const fecha = new Date(ping.date).toLocaleString([], { dateStyle: 'short', timeStyle: 'medium' });
+                    const item = document.createElement('li');
+                    item.innerHTML = `<span>${fecha}</span> <span>Latido OK</span>`;
+                    logList.appendChild(item);
+                });
+
+            } else {
+                currentDurationEl.innerText = "Sin datos";
+                lastOutageEl.innerText = "Sin registros";
+                logList.innerHTML = '<li>No hay registros recientes.</li>';
+            }
+        }
+
+        // Cargar al abrir y actualizar cada 60 segundos
+        fetchMonitorData();
+        setInterval(fetchMonitorData, 60000);
+    </script>
 </body>
 </html>
