@@ -153,14 +153,10 @@
     </div>
 
     <script>
-        // TU URL DE CLOUDFLARE WORKER
         const WORKER_URL = "https://monitor-luz-casa.royber-seijas.workers.dev";
-
-        // Margen en minutos para considerar un corte si no hay pings
         const EXPECTED_PING_INTERVAL_MINUTES = 6; 
 
-        let lastPingDate = null;
-        let isCurrentlyUp = true;
+        let stateStartDate = null; // Guardará el momento exacto en que inició este estado (luz o apagón)
 
         function formatDuration(ms) {
             const totalMinutes = Math.floor(ms / (1000 * 60));
@@ -192,22 +188,40 @@
             const logList = document.getElementById('logList');
 
             const pings = data.pings || [];
+            const isCurrentlyUp = data.status === 'up';
             
-            isCurrentlyUp = data.status === 'up';
             statusBox.className = `status-box ${isCurrentlyUp ? 'status-up' : 'status-down'}`;
             statusBox.innerText = isCurrentlyUp ? 'HAY LUZ EN CASA ⚡' : 'SIN LUZ (APAGÓN) ❌';
 
             if (pings.length > 0) {
                 const sortedPings = [...pings].sort((a, b) => new Date(a.date) - new Date(b.date));
-                lastPingDate = new Date(sortedPings[sortedPings.length - 1].date);
 
                 if (isCurrentlyUp) {
                     currentDurationLabel.innerText = "Tiempo con luz continua";
+                    
+                    // Buscar desde dónde viene el periodo actual de luz ininterrumpida
+                    // Buscamos hacia atrás el último corte mayor a EXPECTED_PING_INTERVAL_MINUTES
+                    let continuousStart = new Date(sortedPings[0].date); // Por defecto el más antiguo
+                    for (let i = sortedPings.length - 1; i > 0; i--) {
+                        const current = new Date(sortedPings[i].date);
+                        const previous = new Date(sortedPings[i-1].date);
+                        const gapMinutes = (current - previous) / (1000 * 60);
+
+                        if (gapMinutes > EXPECTED_PING_INTERVAL_MINUTES) {
+                            // Encontramos el último apagón, la luz continua empezó en el ping 'current'
+                            continuousStart = current;
+                            break;
+                        }
+                    }
+                    stateStartDate = continuousStart;
+
                 } else {
                     currentDurationLabel.innerText = "Tiempo que lleva el apagón";
+                    // Si está sin luz, el apagón empezó en el último ping recibido
+                    stateStartDate = new Date(sortedPings[sortedPings.length - 1].date);
                 }
 
-                // Actualizar contador inmediatamente
+                // Actualizar reloj visual inmediatamente
                 updateLiveTimer();
 
                 // --- CALCULO DEL ÚLTIMO CORTE ---
@@ -244,11 +258,11 @@
             }
         }
 
-        // Actualizar el contador en pantalla cada 1 segundo de forma fluida
+        // Actualiza el contador segundo a segundo de forma fluida sin resetearse
         function updateLiveTimer() {
-            if (!lastPingDate) return;
+            if (!stateStartDate) return;
             const now = new Date();
-            const diffMs = now - lastPingDate;
+            const diffMs = now - stateStartDate;
             document.getElementById('currentDuration').innerText = formatDuration(Math.max(0, diffMs));
         }
 
@@ -256,7 +270,7 @@
         fetchMonitorData();
         setInterval(fetchMonitorData, 60000);
 
-        // Refrescar el reloj visual cada 1 segundo
+        // Refrescar el texto del contador cada 1 segundo
         setInterval(updateLiveTimer, 1000);
     </script>
 </body>
