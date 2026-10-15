@@ -89,35 +89,6 @@
             font-size: 1.05rem;
             font-weight: 600;
         }
-
-        h2 {
-            font-size: 1.1rem;
-            margin-top: 0;
-            margin-bottom: 12px;
-            color: var(--text-muted);
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 6px;
-        }
-
-        ul {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            max-height: 200px;
-            overflow-y: auto;
-        }
-
-        li {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            font-size: 0.9rem;
-        }
-
-        li:last-child {
-            border-bottom: none;
-        }
     </style>
 </head>
 <body>
@@ -141,14 +112,6 @@
                     <div class="stat-value" id="lastOutage">Analizando historial...</div>
                 </div>
             </div>
-        </div>
-
-        <!-- Historial de Latidos -->
-        <div class="card">
-            <h2>Últimos Registros</h2>
-            <ul id="logList">
-                <li>Cargando registros...</li>
-            </ul>
         </div>
     </div>
 
@@ -187,7 +150,6 @@
             const currentDurationLabel = document.getElementById('currentDurationLabel');
             const currentDurationEl = document.getElementById('currentDuration');
             const lastOutageEl = document.getElementById('lastOutage');
-            const logList = document.getElementById('logList');
 
             const pings = data.pings || [];
             isCurrentlyUp = data.status === 'up';
@@ -199,26 +161,11 @@
                 const sortedPings = [...pings].sort((a, b) => new Date(a.date) - new Date(b.date));
 
                 if (isCurrentlyUp) {
-                    currentDurationLabel.innerText = "Luz restaurada";
-                    
-                    // Buscar a qué hora exacta regresó la luz (el primer ping después del último corte)
-                    let restoredTime = new Date(sortedPings[0].date);
-                    for (let i = sortedPings.length - 1; i > 0; i--) {
-                        const current = new Date(sortedPings[i].date);
-                        const previous = new Date(sortedPings[i-1].date);
-                        const gapMinutes = (current - previous) / (1000 * 60);
-
-                        if (gapMinutes > EXPECTED_PING_INTERVAL_MINUTES) {
-                            restoredTime = current;
-                            break;
-                        }
-                    }
-                    currentDurationEl.innerText = `A las ${restoredTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} (${restoredTime.toLocaleDateString()})`;
-                    blackoutStartDate = null; // No hay apagón activo
-
+                    currentDurationLabel.innerText = "Estado actual";
+                    currentDurationEl.innerText = "Luz establecida";
+                    blackoutStartDate = null; 
                 } else {
                     currentDurationLabel.innerText = "Tiempo que lleva el apagón";
-                    // Si está sin luz, el apagón empezó en el último ping recibido
                     blackoutStartDate = new Date(sortedPings[sortedPings.length - 1].date);
                     updateLiveTimer();
                 }
@@ -241,19 +188,9 @@
                 if (!foundOutage) {
                     lastOutageEl.innerText = "Ningún corte reciente registrado";
                 }
-
-                // --- LLENAR LISTA DE REGISTROS ---
-                logList.innerHTML = '';
-                sortedPings.reverse().slice(0, 10).forEach(ping => {
-                    const fecha = new Date(ping.date).toLocaleString([], { dateStyle: 'short', timeStyle: 'medium' });
-                    const item = document.createElement('li');
-                    item.innerHTML = `<span>${fecha}</span> <span>Latido OK</span>`;
-                    logList.appendChild(item);
-                });
             } else {
                 currentDurationEl.innerText = "Sin datos";
                 lastOutageEl.innerText = "Sin registros";
-                logList.innerHTML = '<li>No hay registros recientes.</li>';
             }
         }
 
