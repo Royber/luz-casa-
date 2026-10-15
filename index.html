@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Monitor de Energía - Guacara av. piar</title>
+    <!-- Carga de fuente elegante estilo letra corrida / cursiva -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,500&display=swap" rel="stylesheet">
+
     <style>
         :root {
             --bg-color: #0f172a;
@@ -30,7 +35,7 @@
             max-width: 500px;
         }
 
-        /* Estilo mejorado y elegante para el título principal */
+        /* Estilo para el título principal */
         h1 {
             font-size: 1.4rem;
             text-align: center;
@@ -117,12 +122,24 @@
             font-size: 1.05rem;
             font-weight: 600;
         }
+
+        /* Estilo para la firma inferior en letra corrida */
+        .owner-footer {
+            text-align: center;
+            margin-top: 24px;
+            font-family: 'Playfair Display', serif;
+            font-style: italic;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            letter-spacing: 0.5px;
+            opacity: 0.8;
+        }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <!-- Título principal con subtítulo estilizado -->
+        <!-- Título principal -->
         <h1>Monitor de Energía<span>Guacara • Av. Piar</span></h1>
 
         <!-- Estado Visual con Bombillo -->
@@ -142,6 +159,11 @@
                     <div class="stat-value" id="lastOutage">Analizando historial...</div>
                 </div>
             </div>
+        </div>
+
+        <!-- Firma al final -->
+        <div class="owner-footer">
+            owner - Royber Seijas
         </div>
     </div>
 
