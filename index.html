@@ -45,25 +45,39 @@
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
 
+        /* Estilo visual del indicador con bombillo */
         .status-box {
             text-align: center;
-            padding: 20px;
-            border-radius: 8px;
-            font-size: 1.25rem;
-            font-weight: bold;
+            padding: 24px 20px;
+            border-radius: 12px;
             margin-bottom: 16px;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .bulb-icon {
+            font-size: 3.5rem;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .status-text {
+            font-size: 1.3rem;
+            font-weight: bold;
         }
 
         .status-up {
-            background-color: rgba(34, 197, 94, 0.15);
+            background-color: rgba(34, 197, 94, 0.1);
+            border-color: rgba(34, 197, 94, 0.4);
             color: var(--accent-green);
-            border: 1px solid var(--accent-green);
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.15);
         }
 
         .status-down {
-            background-color: rgba(239, 68, 68, 0.15);
+            background-color: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.4);
             color: var(--accent-red);
-            border: 1px solid var(--accent-red);
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.15);
         }
 
         .stat-grid {
@@ -96,10 +110,11 @@
     <div class="container">
         <h1>Monitor de Energía</h1>
 
-        <!-- Estado Actual -->
+        <!-- Estado Visual con Bombillo -->
         <div class="card">
             <div id="statusBox" class="status-box status-up">
-                Cargando estado...
+                <span id="bulbIcon" class="bulb-icon">💡</span>
+                <div id="statusText" class="status-text">HAY LUZ EN CASA</div>
             </div>
 
             <div class="stat-grid">
@@ -139,14 +154,18 @@
                 const data = await response.json();
                 processDashboard(data);
             } catch (error) {
-                document.getElementById('statusBox').className = 'status-box status-down';
-                document.getElementById('statusBox').innerText = 'Error de Conexión';
+                const statusBox = document.getElementById('statusBox');
+                statusBox.className = 'status-box status-down';
+                document.getElementById('bulbIcon').innerText = '🔌';
+                document.getElementById('statusText').innerText = 'ERROR DE CONEXIÓN';
                 console.error(error);
             }
         }
 
         function processDashboard(data) {
             const statusBox = document.getElementById('statusBox');
+            const bulbIcon = document.getElementById('bulbIcon');
+            const statusText = document.getElementById('statusText');
             const currentDurationLabel = document.getElementById('currentDurationLabel');
             const currentDurationEl = document.getElementById('currentDuration');
             const lastOutageEl = document.getElementById('lastOutage');
@@ -154,8 +173,15 @@
             const pings = data.pings || [];
             isCurrentlyUp = data.status === 'up';
             
-            statusBox.className = `status-box ${isCurrentlyUp ? 'status-up' : 'status-down'}`;
-            statusBox.innerText = isCurrentlyUp ? 'HAY LUZ EN CASA ⚡' : 'SIN LUZ (APAGÓN) ❌';
+            if (isCurrentlyUp) {
+                statusBox.className = 'status-box status-up';
+                bulbIcon.innerText = '💡';
+                statusText.innerText = 'HAY LUZ EN CASA';
+            } else {
+                statusBox.className = 'status-box status-down';
+                bulbIcon.innerText = '❌';
+                statusText.innerText = 'SIN LUZ (APAGÓN)';
+            }
 
             if (pings.length > 0) {
                 const sortedPings = [...pings].sort((a, b) => new Date(a.date) - new Date(b.date));
