@@ -133,7 +133,7 @@
 
             <div class="stat-grid">
                 <div class="stat-item">
-                    <div class="stat-label" id="currentDurationLabel">Tiempo en el estado actual</div>
+                    <div class="stat-label" id="currentDurationLabel">Estado de la luz</div>
                     <div class="stat-value" id="currentDuration">Calculando...</div>
                 </div>
                 <div class="stat-item">
@@ -156,7 +156,8 @@
         const WORKER_URL = "https://monitor-luz-casa.royber-seijas.workers.dev";
         const EXPECTED_PING_INTERVAL_MINUTES = 6; 
 
-        let stateStartDate = null; // Guardará el momento exacto en que inició este estado (luz o apagón)
+        let blackoutStartDate = null; 
+        let isCurrentlyUp = true;
 
         function formatDuration(ms) {
             const totalMinutes = Math.floor(ms / (1000 * 60));
@@ -184,11 +185,12 @@
         function processDashboard(data) {
             const statusBox = document.getElementById('statusBox');
             const currentDurationLabel = document.getElementById('currentDurationLabel');
+            const currentDurationEl = document.getElementById('currentDuration');
             const lastOutageEl = document.getElementById('lastOutage');
             const logList = document.getElementById('logList');
 
             const pings = data.pings || [];
-            const isCurrentlyUp = data.status === 'up';
+            isCurrentlyUp = data.status === 'up';
             
             statusBox.className = `status-box ${isCurrentlyUp ? 'status-up' : 'status-down'}`;
             statusBox.innerText = isCurrentlyUp ? 'HAY LUZ EN CASA ⚡' : 'SIN LUZ (APAGÓN) ❌';
@@ -197,32 +199,29 @@
                 const sortedPings = [...pings].sort((a, b) => new Date(a.date) - new Date(b.date));
 
                 if (isCurrentlyUp) {
-                    currentDurationLabel.innerText = "Tiempo con luz continua";
+                    currentDurationLabel.innerText = "Luz restaurada";
                     
-                    // Buscar desde dónde viene el periodo actual de luz ininterrumpida
-                    // Buscamos hacia atrás el último corte mayor a EXPECTED_PING_INTERVAL_MINUTES
-                    let continuousStart = new Date(sortedPings[0].date); // Por defecto el más antiguo
+                    // Buscar a qué hora exacta regresó la luz (el primer ping después del último corte)
+                    let restoredTime = new Date(sortedPings[0].date);
                     for (let i = sortedPings.length - 1; i > 0; i--) {
                         const current = new Date(sortedPings[i].date);
                         const previous = new Date(sortedPings[i-1].date);
                         const gapMinutes = (current - previous) / (1000 * 60);
 
                         if (gapMinutes > EXPECTED_PING_INTERVAL_MINUTES) {
-                            // Encontramos el último apagón, la luz continua empezó en el ping 'current'
-                            continuousStart = current;
+                            restoredTime = current;
                             break;
                         }
                     }
-                    stateStartDate = continuousStart;
+                    currentDurationEl.innerText = `A las ${restoredTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} (${restoredTime.toLocaleDateString()})`;
+                    blackoutStartDate = null; // No hay apagón activo
 
                 } else {
                     currentDurationLabel.innerText = "Tiempo que lleva el apagón";
                     // Si está sin luz, el apagón empezó en el último ping recibido
-                    stateStartDate = new Date(sortedPings[sortedPings.length - 1].date);
+                    blackoutStartDate = new Date(sortedPings[sortedPings.length - 1].date);
+                    updateLiveTimer();
                 }
-
-                // Actualizar reloj visual inmediatamente
-                updateLiveTimer();
 
                 // --- CALCULO DEL ÚLTIMO CORTE ---
                 let foundOutage = false;
@@ -252,17 +251,17 @@
                     logList.appendChild(item);
                 });
             } else {
-                document.getElementById('currentDuration').innerText = "Sin datos";
+                currentDurationEl.innerText = "Sin datos";
                 lastOutageEl.innerText = "Sin registros";
                 logList.innerHTML = '<li>No hay registros recientes.</li>';
             }
         }
 
-        // Actualiza el contador segundo a segundo de forma fluida sin resetearse
+        // Actualiza el contador del apagón segundo a segundo solo si estamos sin luz
         function updateLiveTimer() {
-            if (!stateStartDate) return;
+            if (isCurrentlyUp || !blackoutStartDate) return;
             const now = new Date();
-            const diffMs = now - stateStartDate;
+            const diffMs = now - blackoutStartDate;
             document.getElementById('currentDuration').innerText = formatDuration(Math.max(0, diffMs));
         }
 
@@ -270,7 +269,7 @@
         fetchMonitorData();
         setInterval(fetchMonitorData, 60000);
 
-        // Refrescar el texto del contador cada 1 segundo
+        // Refrescar el reloj visual cada 1 segundo (solo activo durante apagones)
         setInterval(updateLiveTimer, 1000);
     </script>
 </body>
