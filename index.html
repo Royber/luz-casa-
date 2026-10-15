@@ -153,12 +153,14 @@
     </div>
 
     <script>
-        // PEGA AQUÍ TU URL DE CLOUDFLARE WORKER
+        // TU URL DE CLOUDFLARE WORKER
         const WORKER_URL = "https://monitor-luz-casa.royber-seijas.workers.dev";
 
-        // Asumimos que tu ESP32 manda un ping cada X minutos (ej. cada 5 min). 
-        // Si pasan más de este margen sin ping, se asume que se fue la luz.
+        // Margen en minutos para considerar un corte si no hay pings
         const EXPECTED_PING_INTERVAL_MINUTES = 6; 
+
+        let lastPingDate = null;
+        let isCurrentlyUp = true;
 
         function formatDuration(ms) {
             const totalMinutes = Math.floor(ms / (1000 * 60));
@@ -185,49 +187,39 @@
 
         function processDashboard(data) {
             const statusBox = document.getElementById('statusBox');
-            const currentDurationEl = document.getElementById('currentDuration');
             const currentDurationLabel = document.getElementById('currentDurationLabel');
             const lastOutageEl = document.getElementById('lastOutage');
             const logList = document.getElementById('logList');
 
             const pings = data.pings || [];
             
-            // 1. Mostrar estado actual básico
-            const isUp = data.status === 'up';
-            statusBox.className = `status-box ${isUp ? 'status-up' : 'status-down'}`;
-            statusBox.innerText = isUp ? 'HAY LUZ EN CASA ⚡' : 'SIN LUZ (APAGÓN) ❌';
-
-            const now = new Date();
+            isCurrentlyUp = data.status === 'up';
+            statusBox.className = `status-box ${isCurrentlyUp ? 'status-up' : 'status-down'}`;
+            statusBox.innerText = isCurrentlyUp ? 'HAY LUZ EN CASA ⚡' : 'SIN LUZ (APAGÓN) ❌';
 
             if (pings.length > 0) {
-                // Ordenar pings del más antiguo al más reciente para analizar la línea de tiempo
                 const sortedPings = [...pings].sort((a, b) => new Date(a.date) - new Date(b.date));
-                const lastPingTime = new Date(sortedPings[sortedPings.length - 1].date);
+                lastPingDate = new Date(sortedPings[sortedPings.length - 1].date);
 
-                // --- CALCULO 1: Tiempo en el estado actual ---
-                if (isUp) {
+                if (isCurrentlyUp) {
                     currentDurationLabel.innerText = "Tiempo con luz continua";
-                    // Desde el último ping recibido hasta ahora
-                    const diffMs = now - lastPingTime;
-                    currentDurationEl.innerText = formatDuration(Math.max(0, diffMs));
                 } else {
                     currentDurationLabel.innerText = "Tiempo que lleva el apagón";
-                    const diffMs = now - lastPingTime;
-                    currentDurationEl.innerText = formatDuration(Math.max(0, diffMs));
                 }
 
-                // --- CALCULO 2: Buscar el último corte (gap entre pings) ---
+                // Actualizar contador inmediatamente
+                updateLiveTimer();
+
+                // --- CALCULO DEL ÚLTIMO CORTE ---
                 let foundOutage = false;
                 for (let i = sortedPings.length - 1; i > 0; i--) {
                     const current = new Date(sortedPings[i].date);
                     const previous = new Date(sortedPings[i-1].date);
                     const gapMinutes = (current - previous) / (1000 * 60);
 
-                    // Si la brecha entre dos pings es mayor al intervalo esperado, hubo un corte ahí
                     if (gapMinutes > EXPECTED_PING_INTERVAL_MINUTES) {
-                        const outageDuration = gapMinutes;
                         const outageStart = previous.toLocaleString([], { dateStyle: 'short', timeStyle: 'short' });
-                        lastOutageEl.innerText = `${outageStart} (Duró ${formatDuration(outageDuration * 60 * 1000)})`;
+                        lastOutageEl.innerText = `${outageStart} (Duró ${formatDuration(gapMinutes * 60 * 1000)})`;
                         foundOutage = true;
                         break;
                     }
@@ -245,17 +237,27 @@
                     item.innerHTML = `<span>${fecha}</span> <span>Latido OK</span>`;
                     logList.appendChild(item);
                 });
-
             } else {
-                currentDurationEl.innerText = "Sin datos";
+                document.getElementById('currentDuration').innerText = "Sin datos";
                 lastOutageEl.innerText = "Sin registros";
                 logList.innerHTML = '<li>No hay registros recientes.</li>';
             }
         }
 
-        // Cargar al abrir y actualizar cada 60 segundos
+        // Actualizar el contador en pantalla cada 1 segundo de forma fluida
+        function updateLiveTimer() {
+            if (!lastPingDate) return;
+            const now = new Date();
+            const diffMs = now - lastPingDate;
+            document.getElementById('currentDuration').innerText = formatDuration(Math.max(0, diffMs));
+        }
+
+        // Cargar al abrir y actualizar datos desde el servidor cada 60 segundos
         fetchMonitorData();
         setInterval(fetchMonitorData, 60000);
+
+        // Refrescar el reloj visual cada 1 segundo
+        setInterval(updateLiveTimer, 1000);
     </script>
 </body>
 </html>
